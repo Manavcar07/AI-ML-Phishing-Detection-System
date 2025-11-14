@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Phishing Detector - Demo",
+  "version": "1.0",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}

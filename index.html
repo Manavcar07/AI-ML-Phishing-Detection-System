@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Phishing Defender — Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <style>
+    :root{
+      --bg:#0b0f12; --card:#0f1720; --accent:#00e594; --muted:#98a0aa;
+      --danger:#ff4d4f; --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, Arial, sans-serif;
+    }
+    html,body{height:100%; margin:0; background:linear-gradient(180deg,#071018 0%, #071018 60%); color:#e6eef3}
+    .layout{display:grid; grid-template-columns:260px 1fr; gap:20px; height:100vh; padding:20px;}
+    /* Sidebar */
+    .sidebar{background:linear-gradient(180deg,var(--card),#07131a); border-radius:12px; padding:18px; box-shadow:0 6px 30px rgba(0,0,0,0.6)}
+    .brand{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#00c7a2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#021;box-shadow:0 6px 16px rgba(0,200,150,0.08)}
+    .brand h1{font-size:16px;margin:0}
+    .nav{margin-top:12px}
+    .nav button{display:flex;align-items:center;width:100%;padding:10px;border-radius:8px;border:0;background:transparent;color:var(--muted);cursor:pointer;text-align:left;margin-bottom:8px}
+    .nav button.active{color:var(--accent);background:linear-gradient(90deg, rgba(0,230,148,0.05), transparent)}
+    .small{font-size:12px;color:var(--muted)}
+    .muted{color:var(--muted)}
+    .sidebar .quick{margin-top:12px}
+    .sidebar .quick button{width:100%;padding:10px;border-radius:8px;border:0;background:transparent;color:var(--muted); cursor:pointer}
+    /* Main */
+    .main{padding:8px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .searchCard{background:var(--card);padding:16px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+    .searchCard input{flex:1;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;outline:none}
+    .btn{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#021;font-weight:700;cursor:pointer}
+    .quickTests{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .cardRow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.45)}
+    .resultBox{display:flex;gap:12px;align-items:center}
+    .status{font-weight:800}
+    .history{margin-top:16px;display:grid;grid-template-columns:1fr 420px;gap:12px}
+    .table{background:var(--card);padding:12px;border-radius:10px;max-height:420px;overflow:auto}
+    table{width:100%;border-collapse:collapse;color:#dbeef0}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px}
+    .chartCard{background:var(--card);padding:12px;border-radius:10px}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .mutedSmall{color:var(--muted);font-size:12px}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+    /* responsive */
+    @media (max-width:980px){
+      .layout{grid-template-columns:1fr; padding:12px}
+      .history{grid-template-columns:1fr; }
+      .cardRow{grid-template-columns:repeat(1,1fr)}
+      .sidebar{display:none}
+    }
+  </style>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">PD</div>
+        <div>
+          <h1>PhishDefender</h1>
+          <div class="small muted">Realtime Phishing Protection</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="active" id="nav-dashboard">Dashboard</button>
+        <button id="nav-history">History</button>
+        <button id="nav-settings">Settings</button>
+      </nav>
+
+      <div class="quick">
+        <div class="small muted">Quick actions</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-direction:column">
+          <button id="exportBtn">Export CSV</button>
+          <button id="clearBtn">Clear History</button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="small muted">Scan samples</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+          <button class="muted" data-url="https://google.com">Safe: google.com</button>
+          <button class="muted" data-url="https://facebook.com">Safe: facebook.com</button>
+          <button class="muted" data-url="http://secure-login-google.com/verify">Phish: secure-login-google</button>
+          <button class="muted" data-url="http://update-facebook-security.com">Phish: update-facebook</button>
+        </div>
+      </div>
+
+      <footer style="position:absolute;bottom:18px;left:18px;right:18px">
+        <div class="mutedSmall">Built for demo • Keep backend running at 127.0.0.1:8000</div>
+      </footer>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="topbar">
+        <div class="searchCard">
+          <input id="urlInput" placeholder="Paste URL to scan (or click sample) and press Scan" />
+          <button class="btn" id="scanBtn">Scan</button>
+        </div>
+        <div style="margin-left:12px;display:flex;gap:8px;align-items:center">
+          <div class="mutedSmall">Status:</div>
+          <div id="serverStatus" class="mutedSmall">Checking...</div>
+        </div>
+      </div>
+
+      <div class="quickTests">
+        <button class="card" onclick="quickScan('https://google.com')">Scan Google</button>
+        <button class="card" onclick="quickScan('http://secure-login-google.com/verify')">Scan Example Phish</button>
+        <button class="card" onclick="quickScan('https://github.com')">Scan GitHub</button>
+      </div>
+
+      <div class="cardRow">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small muted">Total Scans</div>
+              <div style="font-size:22px;font-weight:800" id="totalScans">0</div>
+            </div>
+            <div style="text-align:right">
+              <div class="small muted">Phishing</div>
+              <div id="phishCount" style="font-weight:800;color:var(--danger)">0</div>
+            </div>
+            <div style="text-align:right;margin-left:12px">
+              <div class="small muted">Safe</div>
+              <div id="safeCount" style="font-weight:800;color:var(--accent)">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="small muted">Last Scan</div>
+          <div id="lastScan" style="font-weight:700;margin-top:6px">—</div>
+          <div class="mutedSmall" id="lastDetail" style="margin-top:8px">No scans yet.</div>
+        </div>
+
+        <div class="card">
+          <div class="small muted">Live Result</div>
+          <div class="resultBox" style="margin-top:8px">
+            <div style="flex:1">
+              <div id="liveResult" style="font-size:16px">—</div>
+              <div class="mutedSmall" id="liveConfidence">—</div>
+            </div>
+            <div id="liveBadge" style="padding:8px;border-radius:6px;background:var(--glass);font-weight:700">IDLE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="history">
+        <div class="table card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:800">Scan History</div>
+            <div class="mutedSmall">Saved in browser</div>
+          </div>
+          <table id="historyTable">
+            <thead><tr><th>Time</th><th>URL</th><th>Result</th><th>Confidence</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="chartCard">
+          <canvas id="statusChart" width="400" height="250"></canvas>
+          <div class="actions">
+            <button id="downloadCSV">Download CSV</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+<script>
+/* -------------------------
+  Frontend Dashboard Script
+  ------------------------- */
+const BACKEND = "http://127.0.0.1:8000/predict?url=";
+const historyKey = "phishdefender_history_v1";
+
+function nowTS(){ return new Date().toLocaleString(); }
+
+function loadHistory(){
+  try{
+    return JSON.parse(localStorage.getItem(historyKey)||"[]");
+  }catch(e){ return []; }
+}
+function saveHistory(arr){ localStorage.setItem(historyKey, JSON.stringify(arr)); }
+
+function addHistory(item){
+  const arr = loadHistory();
+  arr.unshift(item); // newest first
+  if(arr.length>200) arr.pop();
+  saveHistory(arr);
+  renderHistory();
+  updateStats();
+}
+
+function renderHistory(){
+  const tbody = document.querySelector("#historyTable tbody");
+  tbody.innerHTML="";
+  const arr = loadHistory();
+  arr.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td>${r.time}</td><td style="max-width:320px;word-break:break-all">${r.url}</td>
+      <td style="color:${r.result==='phishing'?'#ff4d4f':'#00e594'};font-weight:700">${r.result}</td>
+      <td>${Math.round(r.confidence*100)}%</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateStats(){
+  const arr = loadHistory();
+  const total = arr.length;
+  const ph = arr.filter(x=>x.result==='phishing').length;
+  const sf = total - ph;
+  document.getElementById("totalScans").innerText = total;
+  document.getElementById("phishCount").innerText = ph;
+  document.getElementById("safeCount").innerText = sf;
+  if(arr[0]){
+    document.getElementById("lastScan").innerText = arr[0].time;
+    document.getElementById("lastDetail").innerText = `${arr[0].url} • ${arr[0].result} • ${Math.round(arr[0].confidence*100)}%`;
+  }
+  updateChart(arr);
+}
+
+/* Chart */
+let chart=null;
+function createChart(){
+  const ctx = document.getElementById("statusChart").getContext("2d");
+  chart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: [],
+      datasets:[
+        {label:'Phishing', data:[], borderColor:'#ff4d4f', tension:0.3},
+        {label:'Safe', data:[], borderColor:'#00e594', tension:0.3}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{x:{display:true}, y:{display:true}}
+    }
+  });
+}
+function updateChart(arr){
+  const last = arr.slice(0,20).reverse(); // oldest -> newest for plot
+  chart.data.labels = last.map((_,i)=> i ? "" : ""); // minimal labels
+  chart.data.datasets[0].data = last.map(x=> x.result==='phishing'?1:0);
+  chart.data.datasets[1].data = last.map(x=> x.result==='safe'?1:0);
+  chart.update();
+}
+
+/* UI helpers */
+function setLive(result, confidence, url){
+  const badge = document.getElementById("liveBadge");
+  const resBox = document.getElementById("liveResult");
+  const confBox = document.getElementById("liveConfidence");
+  resBox.innerText = url;
+  confBox.innerText = `Confidence: ${Math.round(confidence*100)}%`;
+  if(result==='phishing'){
+    badge.innerText="PHISHING";
+    badge.style.background = "rgba(255,77,79,0.12)";
+    badge.style.color = "#ff4d4f";
+    resBox.style.color = "#ff4d4f";
+  } else {
+    badge.innerText="SAFE";
+    badge.style.background = "rgba(0,230,148,0.08)";
+    badge.style.color = "#00e594";
+    resBox.style.color = "#00e594";
+  }
+}
+
+/* Server status check */
+async function checkServer(){
+  try{
+    const r = await fetch("http://127.0.0.1:8000/predict?url=https://google.com");
+    if(r.ok){ document.getElementById("serverStatus").innerText = "Backend OK"; document.getElementById("serverStatus").style.color = "#00e594"; }
+    else { document.getElementById("serverStatus").innerText = "Backend Error"; document.getElementById("serverStatus").style.color = "orange"; }
+  }catch(e){
+    document.getElementById("serverStatus").innerText = "Backend Offline";
+    document.getElementById("serverStatus").style.color = "orange";
+  }
+}
+
+/* Scan flow */
+async function scanURL(url){
+  const start = nowTS();
+  try{
+    const r = await fetch(BACKEND + encodeURIComponent(url));
+    const data = await r.json();
+    // expected {url, prediction, confidence}
+    addHistory({time:start, url: data.url, result: data.prediction, confidence: data.confidence});
+    setLive(data.prediction, data.confidence, data.url);
+    return data;
+  }catch(e){
+    addHistory({time:start, url, result:'error', confidence:0});
+    document.getElementById("liveResult").innerText = "Error connecting to backend";
+    document.getElementById("liveResult").style.color = "orange";
+    return null;
+  }
+}
+
+/* UI bindings */
+document.getElementById("scanBtn").addEventListener("click", ()=>{
+  const url = document.getElementById("urlInput").value.trim();
+  if(url) scanURL(url);
+});
+document.getElementById("urlInput").addEventListener("keypress", (e)=>{ if(e.key==='Enter'){ document.getElementById("scanBtn").click(); } });
+
+/* quick sample buttons in sidebar */
+document.querySelectorAll('.sidebar .muted').forEach(b=>{
+  b.addEventListener('click', (ev)=>{
+    const u = ev.currentTarget.getAttribute('data-url');
+    if(u){ document.getElementById("urlInput").value = u; scanURL(u); }
+  });
+});
+
+/* quick test cards */
+function quickScan(u){ document.getElementById("urlInput").value = u; scanURL(u); }
+
+/* export CSV */
+function exportCSV(){
+  const arr = loadHistory();
+  if(arr.length===0){ alert("No history"); return; }
+  const rows = [["time","url","result","confidence"]];
+  arr.forEach(r=> rows.push([r.time, r.url, r.result, Math.round(r.confidence*100)]));
+  const csv = rows.map(r=> r.map(c=> `"${(c+"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download="phish_history.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* Clear history */
+function clearHistory(){
+  if(!confirm("Clear all scan history?")) return;
+  localStorage.removeItem(historyKey);
+  renderHistory(); updateStats();
+}
+
+/* initial */
+document.getElementById("exportBtn").addEventListener("click", exportCSV);
+document.getElementById("clearBtn").addEventListener("click", clearHistory);
+document.getElementById("downloadCSV").addEventListener("click", exportCSV);
+
+/* nav (simple) */
+document.getElementById("nav-history").addEventListener("click", ()=>{
+  window.scrollTo({top:400, behavior:'smooth'});
+});
+document.getElementById("nav-dashboard").addEventListener("click", ()=>{ window.scrollTo({top:0, behavior:'smooth'}); });
+
+/* on load */
+createChart(); renderHistory(); updateStats(); checkServer();
+</script>
+</body>
+</html>
