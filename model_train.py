@@ -1,8 +1,3 @@
-"""
-UPGRADED MODEL TRAINING SCRIPT
-Includes advanced feature engineering for phishing detection.
-"""
-
 import pandas as pd
 import numpy as np
 import pickle
@@ -21,10 +16,6 @@ try:
     import requests
 except:
     requests = None
-
-# -------------------------------
-# Utility Functions
-# -------------------------------
 
 def get_domain(url):
     ext = tldextract.extract(url)
@@ -113,10 +104,6 @@ def extract_features(url):
 
     return features
 
-# -------------------------------
-# TRAINING
-# -------------------------------
-
 df = pd.read_csv("dataset_small.csv")
 
 X = np.array([extract_features(u) for u in df["url"]])
@@ -128,3 +115,4 @@ model.fit(X, y)
 pickle.dump(model, open("phishing_model.pkl", "wb"))
 
 print("Advanced model trained and saved as phishing_model.pkl")
+
